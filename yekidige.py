@@ -92,10 +92,10 @@ def get_main_menu_buttons(user_id):
         [Button.text("🗂Add token🗂"), Button.text("⭕Delete token⭕️")],
         [Button.text("🤖manage_bots🤖")],
         [Button.text("📞 Login to Account 📞"), Button.text("📤 Logout 📤")],
-        [Button.text(" راهنما")]
+        [Button.text("راهنما")]
     ]
     if user_id == MAIN_ADMIN_ID:
-        buttons.insert(2, [Button.text(" مدیریرت ادمین ها")])
+        buttons.insert(2, [Button.text("مدیریرت ادمین ها")])
     return buttons
 
 def get_target_channels(tokenusername):
@@ -216,7 +216,7 @@ async def help(event):
         buttons = get_main_menu_buttons(user)
         await event.respond("🏠به خانه برگشتیم🏠", buttons=buttons)
 
-    elif text == " راهنما":
+    elif text == "راهنما":
         help_text = """
 راهنمای کامل ربات کپی
 
@@ -228,7 +228,7 @@ async def help(event):
 - **🤖 manage_bots 🤖**: برای مدیریت کانال‌های مبدأ و مقصد هر ربات.
 - **📞 Login to Account 📞**: برای ورود به حساب کاربری اصلی خودتان جهت کپی کردن پست‌ها از کانال‌های خصوصی.
 - **📤 Logout 📤**: برای خروج از حساب کاربری.
-- ** مدیریرت ادمین ها**: (فقط برای ادمین اصلی) برای افزودن یا حذف ادمین‌های دیگر.
+- **مدیریرت ادمین ها**: (فقط برای ادمین اصلی) برای افزودن یا حذف ادمین‌های دیگر.
 
 **مراحل کار:**
 1.  **لاگین**: ابتدا با زدن دکمه `Login to Account` و ارسال شماره تلفن، کد تایید و رمز عبور دو مرحله‌ای (در صورت وجود) وارد حساب خود شوید.
@@ -245,7 +245,7 @@ async def help(event):
 """
         await event.respond(help_text, buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
 
-    elif text == " مدیریرت ادمین ها" and event.sender_id == MAIN_ADMIN_ID:
+    elif text == "مدیریرت ادمین ها" and event.sender_id == MAIN_ADMIN_ID:
         admin_buttons = [
             [Button.text("➕ Add Admin"), Button.text("➖ Remove Admin")],
             [Button.text("🏠بازگشت به خانه🏠")]
