@@ -22,6 +22,9 @@ API_ID = 29953680
 API_HASH = "78d69d4f1e8876f9cf400bfffcf96ad8"
 
 
+MAIN_ADMIN_ID = 145501461
+
+
 
 bot_token='8388800817:AAFyPGfYGNskFnphCrBjH7v_wGEe_b_5fx8'
 
@@ -45,6 +48,55 @@ def create_db_connection():
         host=HOST, user=USERNAME, password=PASSWORD, database=DATABASE ,charset="utf8mb4"
     )
     return connection
+
+def initialize_database():
+    conn = create_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS admins (
+            id INT AUTO_INCREMENT PRIMARY_KEY,
+            user_id BIGINT UNIQUE NOT NULL
+        )
+    """)
+    conn.commit()
+    cursor.close()
+    conn.close()
+    print("Database initialized and 'admins' table checked/created.")
+
+async def is_admin(user_id):
+    if user_id == MAIN_ADMIN_ID:
+        return True
+
+    conn = create_db_connection()
+    cursor = conn.cursor()
+    query = "SELECT user_id FROM admins WHERE user_id = %s"
+    cursor.execute(query, (user_id,))
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    return result is not None
+
+async def get_other_admins():
+    conn = create_db_connection()
+    cursor = conn.cursor(dictionary=True) # Use dictionary cursor to get column names
+    query = "SELECT * FROM admins"
+    cursor.execute(query)
+    admins = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return admins
+
+def get_main_menu_buttons(user_id):
+    buttons = [
+        [Button.text("🗂Add token🗂"), Button.text("⭕Delete token⭕️")],
+        [Button.text("🤖manage_bots🤖")],
+        [Button.text("📞 Login to Account 📞"), Button.text("📤 Logout 📤")],
+        [Button.text(" راهنما")]
+    ]
+    if user_id == MAIN_ADMIN_ID:
+        buttons.insert(2, [Button.text(" مدیریرت ادمین ها")])
+    return buttons
 
 def get_target_channels(tokenusername):
     conn = create_db_connection()
@@ -144,24 +196,133 @@ async  def find_profit(text,nn):
             l.append(int(float(numbers[0])))
     return l
 
-@bot_client.on(events.NewMessage(from_users=[145501461,6716081439,8160247465,7494626689]))
+@bot_client.on(events.NewMessage())
 async def help(event):
     global user_step,clients,cos,kir, user_client_running
+
+    if not await is_admin(event.sender_id):
+        return
+
     conn = create_db_connection()
     user = event.sender_id
     text = event.text
-    if text =="/start":
+    if text == "/start":
         user_step[user] = {'step': "home","token":"","channel":"","client":"","message":"","file":"","txt":"","size":"","phone": "", "code_hash": ""}
-        await event.respond("🔥Copy bot🔥" , buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞"), Button.text("📤 Logout 📤")]])
-    elif text=='🏠بازگشت به خانه🏠':
-        await event.respond("🏠به خانه برگشتیم🏠", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞"), Button.text("📤 Logout 📤")]])
-        user_step[event.sender_id] = {'step': "home",'token':"","channel":"","client":"","message":"","file":"","txt":"","size":"","phone": "", "code_hash": ""}
+        buttons = get_main_menu_buttons(user)
+        await event.respond("🔥Copy bot🔥" , buttons=buttons)
+
+    elif text == '🏠بازگشت به خانه🏠':
+        user_step[user] = {'step': "home","token":"","channel":"","client":"","message":"","file":"","txt":"","size":"","phone": "", "code_hash": ""}
+        buttons = get_main_menu_buttons(user)
+        await event.respond("🏠به خانه برگشتیم🏠", buttons=buttons)
+
+    elif text == " راهنما":
+        help_text = """
+راهنمای کامل ربات کپی
+
+این ربات به شما اجازه می‌دهد پیام‌ها را از کانال‌های مبدأ به کانال‌های مقصد کپی کنید.
+
+**منوی اصلی:**
+- **🗂 Add token 🗂**: برای اضافه کردن یک ربات جدید (کلاینت) با استفاده از توکن آن.
+- **⭕ Delete token ⭕️**: برای حذف یک ربات (کلاینت) از لیست.
+- **🤖 manage_bots 🤖**: برای مدیریت کانال‌های مبدأ و مقصد هر ربات.
+- **📞 Login to Account 📞**: برای ورود به حساب کاربری اصلی خودتان جهت کپی کردن پست‌ها از کانال‌های خصوصی.
+- **📤 Logout 📤**: برای خروج از حساب کاربری.
+- ** مدیریرت ادمین ها**: (فقط برای ادمین اصلی) برای افزودن یا حذف ادمین‌های دیگر.
+
+**مراحل کار:**
+1.  **لاگین**: ابتدا با زدن دکمه `Login to Account` و ارسال شماره تلفن، کد تایید و رمز عبور دو مرحله‌ای (در صورت وجود) وارد حساب خود شوید.
+2.  **اضافه کردن توکن**: با زدن `Add token` و ارسال توکن ربات، یک کلاینت جدید اضافه کنید. این کلاینت‌ها برای ارسال پیام به کانال‌های مقصد استفاده می‌شوند.
+3.  **مدیریت ربات‌ها**:
+    - با زدن `manage_bots`، لیستی از ربات‌های فعال نمایش داده می‌شود.
+    - با انتخاب هر ربات، وارد منوی مدیریت آن می‌شوید.
+    - در این منو می‌توانید کانال‌های مبدأ (`☑️اضافه کردن مبدا☑️`) و مقصد (`✅اضافه کردن مقصد✅`) را با ارسال آیدی عددی یا یوزرنیم آن‌ها اضافه کنید.
+    - با کلیک روی آیدی هر کانال در لیست، می‌توانید آن را مدیریت کنید (فعال/غیرفعال کردن، حذف، تعیین متن یا تصویر سفارشی).
+
+**نکات مهم:**
+- برای کپی از کانال‌های خصوصی، حتماً باید با حساب کاربری خودتان (`Login to Account`) لاگین کرده باشید.
+- ادمین اصلی می‌تواند ادمین‌های دیگری را برای دسترسی به ربات اضافه کند.
+"""
+        await event.respond(help_text, buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
+
+    elif text == " مدیریرت ادمین ها" and event.sender_id == MAIN_ADMIN_ID:
+        admin_buttons = [
+            [Button.text("➕ Add Admin"), Button.text("➖ Remove Admin")],
+            [Button.text("🏠بازگشت به خانه🏠")]
+        ]
+        await event.respond("لطفاً یک گزینه را انتخاب کنید:", buttons=admin_buttons)
+
+    elif text == "➕ Add Admin" and event.sender_id == MAIN_ADMIN_ID:
+        user_step[user]['step'] = 'add_admin'
+        await event.respond("لطفاً شناسه کاربری (User ID) ادمین جدید را ارسال کنید.", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
+
+    elif user_step.get(user) and user_step[user].get('step') == 'add_admin' and event.sender_id == MAIN_ADMIN_ID:
+        try:
+            new_admin_id = int(text)
+            conn = create_db_connection()
+            cursor = conn.cursor()
+            query = "INSERT INTO admins (user_id) VALUES (%s)"
+            cursor.execute(query, (new_admin_id,))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            await event.respond(f"ادمین با شناسه {new_admin_id} با موفقیت اضافه شد.", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
+            user_step[user]['step'] = 'home'
+        except ValueError:
+            await event.respond("شناسه کاربری باید یک عدد باشد. لطفاً دوباره تلاش کنید.")
+        except mysql.connector.Error as err:
+            if err.errno == 1062: # Error for duplicate entry
+                await event.respond("این کاربر قبلاً به عنوان ادمین ثبت شده است.")
+            else:
+                await event.respond(f"خطای دیتابیس: {err}")
+            user_step[user]['step'] = 'home'
+
+    elif text == "➖ Remove Admin" and event.sender_id == MAIN_ADMIN_ID:
+        other_admins = await get_other_admins()
+        if not other_admins:
+            await event.respond("هیچ ادمین دیگری برای حذف وجود ندارد.", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
+            return
+
+        admin_list_text = "لیست ادمین‌ها:\n\n"
+        for admin in other_admins:
+            admin_list_text += f"ID: `{admin['user_id']}` (ردیف: {admin['id']})\n"
+
+        admin_list_text += "\nلطفاً **ردیف (id)** ادمینی که می‌خواهید حذف کنید را ارسال کنید."
+
+        user_step[user]['step'] = 'remove_admin'
+        await event.respond(admin_list_text, buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
+
+    elif user_step.get(user) and user_step[user].get('step') == 'remove_admin' and event.sender_id == MAIN_ADMIN_ID:
+        try:
+            admin_db_id = int(text)
+            conn = create_db_connection()
+            cursor = conn.cursor()
+            # Check if admin with this db id exists before deleting
+            check_query = "SELECT * FROM admins WHERE id = %s"
+            cursor.execute(check_query, (admin_db_id,))
+            if not cursor.fetchone():
+                 await event.respond("هیچ ادمینی با این ردیف یافت نشد.", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
+                 user_step[user]['step'] = 'home'
+                 return
+
+            query = "DELETE FROM admins WHERE id = %s"
+            cursor.execute(query, (admin_db_id,))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            await event.respond(f"ادمین با ردیف {admin_db_id} با موفقیت حذف شد.", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
+            user_step[user]['step'] = 'home'
+        except ValueError:
+            await event.respond("ردیف باید یک عدد باشد. لطفاً دوباره تلاش کنید.")
+        except Exception as e:
+            await event.respond(f"خطایی رخ داد: {e}")
+            user_step[user]['step'] = 'home'
 
     elif text == "📞 Login to Account 📞":
         if await user_client.is_user_authorized():
             await event.respond("شما قبلاً با موفقیت وارد شده اید.", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞")]])
         else:
-            await event.respond("لطفاً شماره تلفن خود را برای ورود ارسال کنید (مثال: +989123456789)")
+            await event.respond("لطفاً شماره تلفن خود را برای ورود ارسال کنید (مثال: +989123456789)", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
             user_step[user]['step'] = 'login_phone'
 
     elif user_step.get(user) and user_step[user].get('step') == 'login_phone':
@@ -228,7 +389,7 @@ async def help(event):
             await event.respond("هیچ حساب کاربری برای خروج وجود ندارد.", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞"), Button.text("📤 Logout 📤")]])
 
     elif text == "🗂Add token🗂":
-        await event.respond(' لطفاً توکن تلگرام خود را ارسال کنید تا کلاینت جدیدی بسازم.')
+        await event.respond(' لطفاً توکن تلگرام خود را ارسال کنید تا کلاینت جدیدی بسازم.', buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
         user_step[event.sender_id]['step'] = "token"
 
     elif text=="⭕Delete token⭕️":
@@ -272,10 +433,10 @@ async def help(event):
 
     elif text == '☑️اضافه کردن مبدا☑️':
         user_step[event.sender_id]["step"] = "source"
-        await event.respond("ایدی عددی و یا یوزرنیم گروه مبدا را وارد کنید")
+        await event.respond("ایدی عددی و یا یوزرنیم گروه مبدا را وارد کنید", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
     elif text == "✅اضافه کردن مقصد✅":
         user_step[event.sender_id]["step"] = "destination"
-        await event.respond("ایدی عددی و یا یوزرنیم گروه مقصد را وارد کنید")
+        await event.respond("ایدی عددی و یا یوزرنیم گروه مقصد را وارد کنید", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
 
     elif text == "⭕️غیر فعال کردن⭕️":
         if user_step[user]['channel']!="":
@@ -328,18 +489,15 @@ async def help(event):
 
     elif text == "تعیین متن":
         user_step[event.sender_id]['step'] = "text"
-        await event.respond("متن مورد نظر خود را بفرستید",
-        buttons=[[Button.text("🤖manage_bots🤖"),Button.text('🏠بازگشت به خانه🏠')]])
+        await event.respond("متن مورد نظر خود را بفرستید", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
 
     elif text == "🖼تعیین تصویر🖼":
         user_step[event.sender_id]['step'] = "photo"
-        await event.respond("تصویر مورد نظر خود را بفرستید",
-        buttons=[[Button.text("🤖manage_bots🤖"),Button.text('🏠بازگشت به خانه🏠')]])
+        await event.respond("تصویر مورد نظر خود را بفرستید", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
 
     elif text=="جایگزینی متن":
         user_step[event.sender_id]['step'] = "txt"
-        await event.respond("ابتدا متنی که میخواهید تغییر یابد را نوشته سپس = گذاشته و متن جایگزین را بنویسید",
-        buttons=[[Button.text("🤖manage_bots🤖"),Button.text('🏠بازگشت به خانه🏠')]])
+        await event.respond("ابتدا متنی که میخواهید تغییر یابد را نوشته سپس = گذاشته و متن جایگزین را بنویسید", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
 
     elif text == "حذف تصویر":
         mycursor = conn.cursor()
@@ -1085,6 +1243,7 @@ async def run_client_loop(client):
 async def main():
     global clients, user_client_running
     try:
+        initialize_database()
         # Start the bot client first
         await bot_client.start(bot_token=bot_token)
         print("Bot client started...")
