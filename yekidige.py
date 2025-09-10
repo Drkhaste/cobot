@@ -1,4 +1,5 @@
 from telethon import TelegramClient, events,Button
+from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError, PasswordHashInvalidError
 import os
 import asyncio
 import mysql.connector
@@ -29,7 +30,6 @@ API_HASH = "78d69d4f1e8876f9cf400bfffcf96ad8"
 
 # PHONE_NUMBER =+299227859
 # PHONE_NUMBER =+85368520745
-PHONE_NUMBER =+989963834522
 
 bot_token='8364752229:AAF3OIrerAsYehNGWjchyHT4ER7QlFugsWk'
 #
@@ -178,11 +178,71 @@ async def help(event):
     user = event.sender_id
     text = event.text
     if text =="/start":
-        user_step[user] = {'step': "home","token":"","channel":"","client":"","message":"","file":"","txt":"","size":""}
-        await event.respond("🔥Copy bot🔥" , buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")]])
+        user_step[user] = {'step': "home","token":"","channel":"","client":"","message":"","file":"","txt":"","size":"","phone": "", "code_hash": ""}
+        await event.respond("🔥Copy bot🔥" , buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞"), Button.text("📤 Logout 📤")]])
     elif text=='🏠بازگشت به خانه🏠':
-        await event.respond("🏠به خانه برگشتیم🏠", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")]])
-        user_step[event.sender_id] = {'step': "home",'token':"","channel":"","client":"","message":"","file":"","txt":"","size":""}
+        await event.respond("🏠به خانه برگشتیم🏠", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞"), Button.text("📤 Logout 📤")]])
+        user_step[event.sender_id] = {'step': "home",'token':"","channel":"","client":"","message":"","file":"","txt":"","size":"","phone": "", "code_hash": ""}
+
+    elif text == "📞 Login to Account 📞":
+        if await user_client.is_user_authorized():
+            await event.respond("شما قبلاً با موفقیت وارد شده اید.", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞")]])
+        else:
+            await event.respond("لطفاً شماره تلفن خود را برای ورود ارسال کنید (مثال: +989123456789)")
+            user_step[user]['step'] = 'login_phone'
+
+    elif user_step.get(user) and user_step[user].get('step') == 'login_phone':
+        try:
+            phone_number = text
+            user_step[user]['phone'] = phone_number
+            # Start the client if it's not already running
+            if not user_client.is_connected():
+                await user_client.connect()
+            result = await user_client.send_code_request(phone_number)
+            user_step[user]['code_hash'] = result.phone_code_hash
+            await event.respond("کد تایید به تلگرام شما ارسال شد. لطفاً کد را وارد کنید.")
+            user_step[user]['step'] = 'login_code'
+        except Exception as e:
+            await event.respond(f"خطایی رخ داد: {e}")
+            user_step[user]['step'] = 'home'
+
+    elif user_step.get(user) and user_step[user].get('step') == 'login_code':
+        try:
+            code = text
+            phone_number = user_step[user]['phone']
+            code_hash = user_step[user]['code_hash']
+            await user_client.sign_in(phone_number, code, phone_code_hash=code_hash)
+            await event.respond("شما با موفقیت وارد شدید!", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞")]])
+            user_step[user]['step'] = 'home'
+        except SessionPasswordNeededError:
+            await event.respond("رمز عبور دو مرحله‌ای شما مورد نیاز است. لطفاً آن را وارد کنید.")
+            user_step[user]['step'] = 'login_password'
+        except PhoneCodeInvalidError:
+            await event.respond("کد وارد شده اشتباه است. لطفاً دوباره تلاش کنید.", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
+            user_step[user]['step'] = 'home'
+        except Exception as e:
+            await event.respond(f"خطایی رخ داد: {e}", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
+            user_step[user]['step'] = 'home'
+
+    elif user_step.get(user) and user_step[user].get('step') == 'login_password':
+        try:
+            password = text
+            await user_client.sign_in(password=password)
+            await event.respond("شما با موفقیت وارد شدید!", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞"), Button.text("📤 Logout 📤")]])
+            user_step[user]['step'] = 'home'
+        except PasswordHashInvalidError:
+            await event.respond("رمز عبور وارد شده اشتباه است. لطفاً دوباره تلاش کنید.", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
+            user_step[user]['step'] = 'home'
+        except Exception as e:
+            await event.respond(f"خطایی رخ داد: {e}", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
+            user_step[user]['step'] = 'home'
+
+    elif text == "📤 Logout 📤":
+        if await user_client.is_user_authorized():
+            await user_client.log_out()
+            await event.respond("شما با موفقیت از حساب کاربری خارج شدید.", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞"), Button.text("📤 Logout 📤")]])
+        else:
+            await event.respond("هیچ حساب کاربری برای خروج وجود ندارد.", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞"), Button.text("📤 Logout 📤")]])
 
     elif text == "🗂Add token🗂":
         await event.respond(' لطفاً توکن تلگرام خود را ارسال کنید تا کلاینت جدیدی بسازم.')
@@ -1032,21 +1092,29 @@ async def delete_message(event):
 async def main():
     global clients
     try:
+        # Start the bot client first
+        await bot_client.start(bot_token=bot_token)
+        print("Bot client started...")
+
+        # Connect the user client and check for an existing session
+        await user_client.connect()
+        if await user_client.is_user_authorized():
+            print("User client is already authorized and connected.")
+        else:
+            print("User client is not authorized. Admin needs to log in via the bot.")
+
         clients = await load_clients()
         print(clients)
 
-        # شروع کلاینت‌ها
+        # Start the other clients
         for client in clients:
             await client.start()
             if not await client.is_user_authorized():
                 print(f"---------{client.session.filename}----------")
 
-        # شروع یوزر و بات
-        await user_client.start(phone=PHONE_NUMBER)
-        await bot_client.start(bot_token=bot_token)
         print("All clients are running...")
 
-        # همه کلاینت‌ها رو یکجا اجرا کن
+        # Run all clients concurrently
         await asyncio.gather(
             user_client.run_until_disconnected(),
             bot_client.run_until_disconnected(),
