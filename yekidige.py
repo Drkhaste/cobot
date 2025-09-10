@@ -129,7 +129,7 @@ async def load_clients():
     cursor.close()
     if myresult!=[]:
         return [
-            TelegramClient(f'session_{token[1].split(":")[0]}', API_ID, API_HASH)
+            (TelegramClient(f'session_{token[1].split(":")[0]}', API_ID, API_HASH), token[1])
             for token in myresult
         ]
     return []
@@ -379,7 +379,7 @@ async def help(event):
             cursor.execute(sql, val)
             conn.commit()
             cursor.close()
-            await new_client.run_until_disconnected()
+            asyncio.create_task(new_client.run_until_disconnected())
         except Exception as e:
             await event.respond(f'متاسفم، نتوانستم با این توکن اتصال برقرار کنم: {e}',buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
 
@@ -1082,14 +1082,18 @@ async def main():
         # Connect the user client and check for an existing session
         await user_client.connect()
 
-        clients = await load_clients()
+        clients_with_tokens = await load_clients()
+        clients.clear()
+        clients.extend([client for client, token in clients_with_tokens])
         print(clients)
 
         # Start the other clients
-        for client in clients:
-            await client.start()
-            if not await client.is_user_authorized():
-                print(f"---------{client.session.filename}----------")
+        for client, token in clients_with_tokens:
+            try:
+                print(f"Starting client {client.session.filename}...")
+                await client.start(bot_token=token)
+            except Exception as e:
+                print(f"Error starting client {client.session.filename}: {e}")
 
         print("All clients are running...")
 
