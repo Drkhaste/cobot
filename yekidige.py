@@ -8,13 +8,8 @@ import subprocess
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+from config import HOST, USERNAME, PASSWORD, DATABASE
 
-# --------------------------
-HOST = "localhost"
-USERNAME = "root"
-PASSWORD = "Ab01f@33e1#[1"
-DATABASE = "copybot"
-# --------------------------
 
 
 
@@ -52,16 +47,46 @@ def create_db_connection():
 def initialize_database():
     conn = create_db_connection()
     cursor = conn.cursor()
+
+    # Admins table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS admins (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id BIGINT UNIQUE NOT NULL
         )
     """)
+
+    # Tokens table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tokens2 (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            token VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Channels table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS channels2 (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            tokenusername VARCHAR(255),
+            typechannel VARCHAR(50),
+            channel_name TEXT,
+            username VARCHAR(255),
+            channel_id BIGINT,
+            status VARCHAR(10),
+            text TEXT,
+            fileid TEXT,
+            txt TEXT,
+            size VARCHAR(100),
+            nn VARCHAR(255)
+        )
+    """)
+
     conn.commit()
     cursor.close()
     conn.close()
-    print("Database initialized and 'admins' table checked/created.")
+    print("Database initialized and all tables checked/created.")
 
 async def is_admin(user_id):
     if user_id == MAIN_ADMIN_ID:
