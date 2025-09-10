@@ -389,7 +389,7 @@ async def help(event):
     elif user_step[user]["step"] == "delettoken":
         try:
             cursor = conn.cursor()
-            query = f"SELECT * FROM tokens2 WHERE number='{text}';"
+            query = f"SELECT * FROM tokens2 WHERE id='{text}';"
             cursor.execute(query)
             myresult = cursor.fetchall()
             cursor.close()
@@ -399,7 +399,7 @@ async def help(event):
                     client_to_remove = client
                     await client_to_remove.disconnect()
                     clients.remove(client_to_remove)
-                    sql = f"DELETE FROM tokens2 WHERE number ='{text}';"
+                    sql = f"DELETE FROM tokens2 WHERE id ='{text}';"
                     mycursor.execute(sql)
                     conn.commit()
                     mycursor.close()
@@ -419,7 +419,7 @@ async def help(event):
             if text != "🗂گروه ها🗂":
                 print(text.split("/")[1])
                 cursor = conn.cursor()
-                query = f"SELECT * FROM tokens2 WHERE number='{text.split('/')[1]}';"
+                query = f"SELECT * FROM tokens2 WHERE id='{text.split('/')[1]}';"
                 cursor.execute(query)
                 myresult = cursor.fetchall()
                 cursor.close()
