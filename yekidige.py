@@ -1072,20 +1072,14 @@ async def delete_message(event):
 
 
 
-async def run_secondary_client(client, token):
+async def run_client_loop(client):
     """
-    Starts a secondary client and runs it until disconnected.
-    Handles exceptions gracefully to prevent crashing the main app.
+    Runs the client's event loop and handles disconnection gracefully.
     """
     try:
-        print(f"Starting secondary client {client.session.filename}...")
-        await client.start(bot_token=token)
-        print(f"Secondary client {client.session.filename} started successfully.")
         await client.run_until_disconnected()
     except Exception as e:
-        print(f"CRITICAL: Secondary client {client.session.filename} failed: {e}")
-        if client.is_connected():
-            await client.disconnect()
+        print(f"Client {client.session.filename} disconnected with error: {e}")
 
 
 async def main():
@@ -1098,15 +1092,26 @@ async def main():
         # Connect the user client and check for an existing session
         await user_client.connect()
 
-        # Load and start secondary clients in the background
+        # Load and start secondary clients
         clients_with_tokens = await load_clients()
-        clients.clear()
-        clients.extend([client for client, token in clients_with_tokens])
 
+        # We use a temporary list to add clients that start successfully
+        started_clients = []
         for client, token in clients_with_tokens:
-            asyncio.create_task(run_secondary_client(client, token))
+            try:
+                print(f"Starting client {client.session.filename}...")
+                await client.start(bot_token=token)
+                # If start is successful, add to list and create background task for its loop
+                started_clients.append(client)
+                asyncio.create_task(run_client_loop(client))
+            except Exception as e:
+                print(f"Error starting client {client.session.filename}: {e}. This client will be ignored.")
 
-        print("Secondary clients are being started in the background...")
+        # Now, update the global clients list with only the ones that started
+        clients.clear()
+        clients.extend(started_clients)
+
+        print(f"Successfully started {len(clients)} secondary clients.")
 
         # Run main clients concurrently
         tasks = [
