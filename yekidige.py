@@ -21,39 +21,11 @@ DATABASE = "tests"
 API_ID = 29953680
 API_HASH = "78d69d4f1e8876f9cf400bfffcf96ad8"
 
-# PHONE_NUMBER =+989963834522
-# bot_token='7882968127:AAHP0pjJzv1DhxUrssoBH7QPRhN6Yf13dDA'
 
-#
-# PHONE_NUMBER =+38269825964
-# bot_token='7836959725:AAEk3rC-EUmli5uq8XmDJ5OBZfyAzXFIWMc'
-
-# PHONE_NUMBER =+299227859
-# PHONE_NUMBER =+85368520745
 
 bot_token='8364752229:AAF3OIrerAsYehNGWjchyHT4ER7QlFugsWk'
-#
-# with open('iPID2', 'r+') as f:
-#     pid = f.read()
-#     result = subprocess.check_output(f'ps aux | grep {pid}', shell=True)
-#     result = result.decode()
-#     if len(result.strip().split('\n')) > 2:
-#         print('err-dup')
-#         exit()
-#     else:
-#         f.seek(0)
-#         f.write(str(os.getpid()))
-#         f.truncate()
 
-
-
-# -----------------------------------------------------------------------------------
-# bot_client = TelegramClient('bot.ssionnew', API_ID, API_HASH)
-# user_client = TelegramClient('user_lientnew.session', API_ID, API_HASH)
-# bot_client = TelegramClient("yekidigebot", API_ID, API_HASH)
-# user_client = TelegramClient('yekidige', API_ID, API_HASH)
 bot_client = TelegramClient("yeki", API_ID, API_HASH)
-# user_client = TelegramClient('mohandes', API_ID, API_HASH)
 user_client = TelegramClient('Asli', API_ID, API_HASH)
 # -----------------------------------------------------------------------------------
 
