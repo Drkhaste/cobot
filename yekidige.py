@@ -766,61 +766,70 @@ async def help(event):
 
 
     elif user_step[user]['step'] == "source":
-        x = re.search("^@.*", text)
-        user_step[user]['step']="managetoken"
-        if x:
-            channel = await user_step[user]['client'].get_entity(text)
-            cursor = conn.cursor()
-            sql = "INSERT INTO channels2 (tokenusername,typechannel,channel_name,username,channel_id,status) VALUES (%s, %s, %s,%s,%s,%s)"
-            val = (user_step[user]["token"],"source",f"{channel.title}", text,f"-100{channel.id}", "1")
-            cursor.execute(sql, val)
-            conn.commit()
-            cursor.close()
-            print(cursor.rowcount, "record inserted.")
-            await event.respond(
-                f"کانال {channel.title} با موفقیت ثبت شد و به صورت پیش فرض فعال است. ",buttons=[[Button.text("🗂گروه ها🗂")],[Button.text("🤖manage_bots🤖"), Button.text('🏠بازگشت به خانه🏠')]]
-            )
-        else:
+        try:
+            managed_client = user_step[user]['client']
+            entity_identifier = text
+            try:
+                entity_identifier = int(text)
+            except ValueError:
+                pass
 
-            channel = await user_client.get_entity(int(text))
-            print(channel.title)
+            channel = await managed_client.get_entity(entity_identifier)
+
             cursor = conn.cursor()
             sql = "INSERT INTO channels2 (tokenusername,typechannel,channel_name,username,channel_id,status) VALUES (%s, %s, %s,%s,%s,%s)"
-            val = (user_step[user]["token"],"source",f"{channel.title}",f"-100{channel.id}" ,f"-100{channel.id}", "1")
+
+            username_to_store = f"-100{channel.id}"
+            if hasattr(channel, 'username') and channel.username:
+                username_to_store = f"@{channel.username}"
+
+            val = (user_step[user]["token"], "source", channel.title, username_to_store, f"-100{channel.id}", "1")
             cursor.execute(sql, val)
             conn.commit()
             cursor.close()
+
             await event.respond(
-                f"کانال {channel.title} با موفقیت ثبت شد و به صورت پیش فرض فعال است. ",buttons=[[Button.text("🗂گروه ها🗂")],[Button.text("🤖manage_bots🤖"), Button.text('🏠بازگشت به خانه🏠')]]
+                f"کانال مبدأ '{channel.title}' با موفقیت ثبت شد.",
+                buttons=get_main_menu_buttons(user)
             )
+            user_step[user]['step'] = "home"
+
+        except Exception as e:
+            await event.respond(f"خطا در اضافه کردن مبدأ: {e}\n\nلطفاً مطمئن شوید ربات شما در کانال مورد نظر عضو است و دوباره تلاش کنید.", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
+            user_step[user]['step'] = "home"
 
     elif user_step[event.sender_id]['step'] == "destination":
+        try:
+            managed_client = user_step[user]['client']
+            entity_identifier = text
+            try:
+                entity_identifier = int(text)
+            except ValueError:
+                pass
 
-        x = re.search("^@.*", text)
-        user_step[user]['step'] = "managetoken"
-        print(f"---------{user_step[user]['token']}------")
-        if x:
-            channel = await user_step[user]['client'].get_entity(text)
+            channel = await managed_client.get_entity(entity_identifier)
+
             cursor = conn.cursor()
             sql = "INSERT INTO channels2 (tokenusername,typechannel,channel_name,username,channel_id,status,text,fileid,txt,size,nn) VALUES (%s, %s, %s,%s,%s,%s,%s,%s,%s,%s,%s)"
-            val = (user_step[user]["token"],"destination",channel.title,text ,f"-100{channel.id}", "1","0","0","0","0","0")
+
+            username_to_store = f"-100{channel.id}"
+            if hasattr(channel, 'username') and channel.username:
+                username_to_store = f"@{channel.username}"
+
+            val = (user_step[user]["token"], "destination", channel.title, username_to_store, f"-100{channel.id}", "1", "0", "0", "0", "0", "0")
             cursor.execute(sql, val)
             conn.commit()
             cursor.close()
+
             await event.respond(
-                f"کانال {channel.title} با موفقیت ثبت شد و به صورت پیش فرض فعال است. ",buttons=[[Button.text("🗂گروه ها🗂")],[Button.text("🤖manage_bots🤖"), Button.text('🏠بازگشت به خانه🏠')]]
+                f"کانال مقصد '{channel.title}' با موفقیت ثبت شد.",
+                buttons=get_main_menu_buttons(user)
             )
-        else:
-            channel = await user_step[user]['client'].get_entity(int(text))
-            cursor = conn.cursor()
-            sql = "INSERT INTO channels2 (tokenusername,typechannel,channel_name,username,channel_id,status,text,fileid,txt,size,nn) VALUES (%s, %s, %s,%s,%s,%s,%s,%s,%s,%s,%s)"
-            val = (user_step[user]["token"],"destination",channel.title, f"-100{channel.id}",f"-100{channel.id}" ,"1","0","0","0","0","0")
-            cursor.execute(sql, val)
-            conn.commit()
-            cursor.close()
-            await event.respond(
-                f"کانال {channel.title} با موفقیت ثبت شد و به صورت پیش فرض فعال است. ",buttons=[[Button.text("🗂گروه ها🗂")],[Button.text("🤖manage_bots🤖"), Button.text('🏠بازگشت به خانه🏠')]]
-            )
+            user_step[user]['step'] = "home"
+
+        except Exception as e:
+            await event.respond(f"خطا در اضافه کردن مقصد: {e}\n\nلطفاً مطمئن شوید ربات شما در کانال مورد نظر عضو است و دوباره تلاش کنید.", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
+            user_step[user]['step'] = "home"
 
     elif user_step[event.sender_id]["step"]=="selecttext":
         user_step[event.sender_id]["step"] = "settingtext"
