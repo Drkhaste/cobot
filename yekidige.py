@@ -1072,6 +1072,22 @@ async def delete_message(event):
 
 
 
+async def run_secondary_client(client, token):
+    """
+    Starts a secondary client and runs it until disconnected.
+    Handles exceptions gracefully to prevent crashing the main app.
+    """
+    try:
+        print(f"Starting secondary client {client.session.filename}...")
+        await client.start(bot_token=token)
+        print(f"Secondary client {client.session.filename} started successfully.")
+        await client.run_until_disconnected()
+    except Exception as e:
+        print(f"CRITICAL: Secondary client {client.session.filename} failed: {e}")
+        if client.is_connected():
+            await client.disconnect()
+
+
 async def main():
     global clients, user_client_running
     try:
@@ -1082,25 +1098,19 @@ async def main():
         # Connect the user client and check for an existing session
         await user_client.connect()
 
+        # Load and start secondary clients in the background
         clients_with_tokens = await load_clients()
         clients.clear()
         clients.extend([client for client, token in clients_with_tokens])
-        print(clients)
 
-        # Start the other clients
         for client, token in clients_with_tokens:
-            try:
-                print(f"Starting client {client.session.filename}...")
-                await client.start(bot_token=token)
-            except Exception as e:
-                print(f"Error starting client {client.session.filename}: {e}")
+            asyncio.create_task(run_secondary_client(client, token))
 
-        print("All clients are running...")
+        print("Secondary clients are being started in the background...")
 
-        # Run all clients concurrently
+        # Run main clients concurrently
         tasks = [
             bot_client.run_until_disconnected(),
-            *[client.run_until_disconnected() for client in clients]
         ]
 
         if await user_client.is_user_authorized():
