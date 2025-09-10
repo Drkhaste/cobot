@@ -12,8 +12,8 @@ from PIL import Image, ImageDraw, ImageFont
 # --------------------------
 HOST = "localhost"
 USERNAME = "root"
-PASSWORD = "1234"
-DATABASE = "tests"
+PASSWORD = "Ab01f@33e1#[1"
+DATABASE = "copybot"
 # --------------------------
 
 
@@ -23,7 +23,7 @@ API_HASH = "78d69d4f1e8876f9cf400bfffcf96ad8"
 
 
 
-bot_token='8364752229:AAF3OIrerAsYehNGWjchyHT4ER7QlFugsWk'
+bot_token='8388800817:AAFyPGfYGNskFnphCrBjH7v_wGEe_b_5fx8'
 
 bot_client = TelegramClient("yeki", API_ID, API_HASH)
 user_client = TelegramClient('Asli', API_ID, API_HASH)
@@ -143,7 +143,7 @@ async  def find_profit(text,nn):
             l.append(int(float(numbers[0])))
     return l
 
-@bot_client.on(events.NewMessage(from_users=[8389024742,6716081439,8160247465,7494626689]))
+@bot_client.on(events.NewMessage(from_users=[145501461,6716081439,8160247465,7494626689]))
 async def help(event):
     global user_step,clients,cos,kir
     conn = create_db_connection()
