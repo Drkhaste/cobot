@@ -34,6 +34,7 @@ cos=""
 kir=""
 list_map={}
 user_step={}
+user_client_running = False
 
 
 photos_folder = "photos"
@@ -145,7 +146,7 @@ async  def find_profit(text,nn):
 
 @bot_client.on(events.NewMessage(from_users=[145501461,6716081439,8160247465,7494626689]))
 async def help(event):
-    global user_step,clients,cos,kir
+    global user_step,clients,cos,kir, user_client_running
     conn = create_db_connection()
     user = event.sender_id
     text = event.text
@@ -186,6 +187,10 @@ async def help(event):
             await user_client.sign_in(phone_number, code, phone_code_hash=code_hash)
             await event.respond("شما با موفقیت وارد شدید!", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞")]])
             user_step[user]['step'] = 'home'
+            if not user_client_running:
+                print("Starting user client event loop after login...")
+                asyncio.create_task(user_client.run_until_disconnected())
+                user_client_running = True
         except SessionPasswordNeededError:
             await event.respond("رمز عبور دو مرحله‌ای شما مورد نیاز است. لطفاً آن را وارد کنید.")
             user_step[user]['step'] = 'login_password'
@@ -202,6 +207,10 @@ async def help(event):
             await user_client.sign_in(password=password)
             await event.respond("شما با موفقیت وارد شدید!", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞"), Button.text("📤 Logout 📤")]])
             user_step[user]['step'] = 'home'
+            if not user_client_running:
+                print("Starting user client event loop after 2FA login...")
+                asyncio.create_task(user_client.run_until_disconnected())
+                user_client_running = True
         except PasswordHashInvalidError:
             await event.respond("رمز عبور وارد شده اشتباه است. لطفاً دوباره تلاش کنید.", buttons=[[Button.text('🏠بازگشت به خانه🏠')]])
             user_step[user]['step'] = 'home'
@@ -212,6 +221,8 @@ async def help(event):
     elif text == "📤 Logout 📤":
         if await user_client.is_user_authorized():
             await user_client.log_out()
+            user_client_running = False
+            print("User client logged out and flag reset.")
             await event.respond("شما با موفقیت از حساب کاربری خارج شدید.", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞"), Button.text("📤 Logout 📤")]])
         else:
             await event.respond("هیچ حساب کاربری برای خروج وجود ندارد.", buttons=[[Button.text("🗂Add token🗂"),Button.text("⭕Delete token⭕️")],[Button.text("🤖manage_bots🤖")],[Button.text("📞 Login to Account 📞"), Button.text("📤 Logout 📤")]])
@@ -1062,7 +1073,7 @@ async def delete_message(event):
 
 
 async def main():
-    global clients
+    global clients, user_client_running
     try:
         # Start the bot client first
         await bot_client.start(bot_token=bot_token)
@@ -1070,10 +1081,6 @@ async def main():
 
         # Connect the user client and check for an existing session
         await user_client.connect()
-        if await user_client.is_user_authorized():
-            print("User client is already authorized and connected.")
-        else:
-            print("User client is not authorized. Admin needs to log in via the bot.")
 
         clients = await load_clients()
         print(clients)
@@ -1087,11 +1094,20 @@ async def main():
         print("All clients are running...")
 
         # Run all clients concurrently
-        await asyncio.gather(
-            user_client.run_until_disconnected(),
+        tasks = [
             bot_client.run_until_disconnected(),
             *[client.run_until_disconnected() for client in clients]
-        )
+        ]
+
+        if await user_client.is_user_authorized():
+            print("User client is already authorized and connected.")
+            tasks.append(user_client.run_until_disconnected())
+            user_client_running = True
+        else:
+            print("User client is not authorized. Admin needs to log in via the bot.")
+
+        await asyncio.gather(*tasks)
+
     except Exception as e:
         print("Error:", e)
 
