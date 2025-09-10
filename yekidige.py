@@ -54,7 +54,7 @@ def initialize_database():
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS admins (
-            id INT AUTO_INCREMENT PRIMARY_KEY,
+            id INT AUTO_INCREMENT PRIMARY KEY,
             user_id BIGINT UNIQUE NOT NULL
         )
     """)
